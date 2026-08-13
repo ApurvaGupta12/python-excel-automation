@@ -11,7 +11,7 @@ For each product, this script:
     2. Collects that product's current Size values, in the same order the
        rows already appear in the file.
     3. Works out the desired Size sequence - either a custom sequence you
-       type in, or an automatically detected descending order.
+       type in, or an automatically detected ascending order.
     4. Writes the resequenced Size values back into the SAME row positions.
 
 Rows themselves are NEVER moved, reordered, deleted, or duplicated - only
@@ -96,6 +96,15 @@ CUSTOM_SIZE_ORDER = ""
 ADD_CUSTOM_SIZE_LAST = True
 CUSTOM_SIZE_LABEL = "Custom Size"
 
+# Some products use a SHORTER or differently-worded version of the same
+# "Custom Size" concept (e.g. just "custom" instead of "Custom Size").
+# Any value that normalizes (uppercase + trimmed) to one of these is
+# treated exactly like CUSTOM_SIZE_LABEL above - pulled out and placed
+# LAST, and excluded from the ascending-order size detection so it can't
+# break the detection for the product's other, real sizes. The original
+# text in the CSV is still never rewritten - only its row position moves.
+CUSTOM_SIZE_LABEL_ALIASES = ["Custom Size", "Custom"]
+
 # -----------------------------------------------------------------------------
 # Add a brand-new "Custom Size" VARIANT ROW per product
 # -----------------------------------------------------------------------------
@@ -110,7 +119,7 @@ CUSTOM_SIZE_LABEL = "Custom Size"
 # resequencing - i.e. its Price, Inventory, SKU, Barcode, Images, and every
 # other column are copied from that "largest size" row, and only the Size
 # option's value is changed to CUSTOM_SIZE_ROW_LABEL.
-ADD_NEW_CUSTOM_SIZE_ROW = True
+ADD_NEW_CUSTOM_SIZE_ROW = False
 CUSTOM_SIZE_ROW_LABEL = "Custom Size"
 
 # The new row's SKU and Barcode are copied verbatim from the "largest size"
@@ -248,11 +257,11 @@ def build_rank_map(unique_values_in_appearance_order, use_custom_order, custom_o
     custom_size_values = []
     working_values = unique_values_in_appearance_order
     if ADD_CUSTOM_SIZE_LAST:
-        custom_size_norm = normalize(CUSTOM_SIZE_LABEL)
+        custom_size_norms = {normalize(alias) for alias in CUSTOM_SIZE_LABEL_ALIASES}
         custom_size_values = [v for v in unique_values_in_appearance_order
-                               if normalize(v) == custom_size_norm]
+                               if normalize(v) in custom_size_norms]
         working_values = [v for v in unique_values_in_appearance_order
-                           if normalize(v) != custom_size_norm]
+                           if normalize(v) not in custom_size_norms]
 
     if use_custom_order and custom_order_list:
         custom_norm_order = [normalize(v) for v in custom_order_list]
@@ -269,11 +278,10 @@ def build_rank_map(unique_values_in_appearance_order, use_custom_order, custom_o
     key_func, fmt_label = detect_sort_key(working_values) if working_values else (None, "n/a")
     if working_values:
         ascending = sorted(working_values, key=key_func)
-        descending = list(reversed(ascending))
     else:
-        descending = []
-    ordered = descending + custom_size_values
-    label = f"auto-detected descending ({fmt_label})" + (" + Custom Size last" if custom_size_values else "")
+        ascending = []
+    ordered = ascending + custom_size_values
+    label = f"auto-detected ascending ({fmt_label})" + (" + Custom Size last" if custom_size_values else "")
     return {v: i for i, v in enumerate(ordered)}, label
 
 
@@ -573,6 +581,16 @@ def process_csv(input_path=INPUT_FILE, output_path=OUTPUT_FILE,
 
 
 if __name__ == "__main__":
+    import sys
+
+    # Optional command-line usage:
+    #     python sequence_sizes.py input.csv [output.csv]
+    # If given, these override the INPUT_FILE / OUTPUT_FILE variables in
+    # the CONFIGURATION section above. If not given, those variables are
+    # used as-is (unchanged behaviour).
+    cli_input = sys.argv[1] if len(sys.argv) > 1 else INPUT_FILE
+    cli_output = sys.argv[2] if len(sys.argv) > 2 else OUTPUT_FILE
+
     use_custom = USE_CUSTOM_SIZE_ORDER
     custom_list = parse_custom_order_string(CUSTOM_SIZE_ORDER)
 
@@ -582,4 +600,5 @@ if __name__ == "__main__":
         )
         custom_list = parse_custom_order_string(order_string)
 
-    process_csv(use_custom_order=use_custom, custom_order_list=custom_list)
+    process_csv(input_path=cli_input, output_path=cli_output,
+                use_custom_order=use_custom, custom_order_list=custom_list)
