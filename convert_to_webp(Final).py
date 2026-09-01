@@ -84,6 +84,7 @@ Image.MAX_IMAGE_PIXELS = None  # disable decompression-bomb limit for large prod
 SHOPIFY_MAX_BYTES = 20 * 1024 * 1024  # 20 MB
 SHOPIFY_MAX_MEGAPIXELS = 25_000_000     # Shopify also rejects images above 25MP (width x height)
 TARGET_WIDTH = 2000                     # force width to 2000px, height auto-scales to keep aspect ratio
+WEBP_MAX_DIMENSION = 16383              # libwebp hard limit - encoder raises "Invalid argument" above this on either side
 SUPPORTED_EXTENSIONS = {
     ".jpg", ".jpeg", ".png", ".tif", ".tiff",
     ".bmp", ".gif", ".webp", ".heic", ".heif"
@@ -116,13 +117,29 @@ def convert_image(input_path: Path, output_path: Path) -> tuple[bool, str]:
             # the original aspect ratio. Only downscales (never enlarges a
             # smaller image, since upscaling would hurt quality). This also
             # keeps every image safely under Shopify's 25-megapixel limit.
-            width, height = img.size
+            orig_width, orig_height = img.size
+            width, height = orig_width, orig_height
             resized = False
             if width > TARGET_WIDTH:
                 new_width = TARGET_WIDTH
                 new_height = max(1, round(height * (TARGET_WIDTH / width)))
-                img = img.resize((new_width, new_height), Image.LANCZOS)
+                width, height = new_width, new_height
                 resized = True
+
+            # Some images (e.g. tall/narrow label scans) have a width under
+            # TARGET_WIDTH but a very large height, so the check above never
+            # triggers. libwebp hard-rejects any side over 16383px with
+            # "[Errno 22] Invalid argument", so cap whichever side is still
+            # too big, regardless of aspect ratio.
+            longest_side = max(width, height)
+            if longest_side > WEBP_MAX_DIMENSION:
+                scale = WEBP_MAX_DIMENSION / longest_side
+                width = max(1, round(width * scale))
+                height = max(1, round(height * scale))
+                resized = True
+
+            if resized:
+                img = img.resize((width, height), Image.LANCZOS)
 
             quality = START_QUALITY
             while True:
@@ -147,7 +164,7 @@ def convert_image(input_path: Path, output_path: Path) -> tuple[bool, str]:
                 return False, f"Converted but still {size_mb:.1f}MB at min quality ({MIN_QUALITY}) - consider resizing dimensions"
 
             if resized:
-                return True, f"OK ({size_mb:.1f}MB, quality={quality}, resized {width}x{height} -> {new_width}x{new_height})"
+                return True, f"OK ({size_mb:.1f}MB, quality={quality}, resized {orig_width}x{orig_height} -> {width}x{height})"
             return True, f"OK ({size_mb:.1f}MB, quality={quality}, kept original size {width}x{height})"
 
     except Exception as e:
