@@ -4,6 +4,15 @@ A collection of Python scripts to automate Excel tasks, simplify complex formula
 <h4 style="font-size:16px;">🖼️ Image to WebP Conversion</h4>
 <pre><code>python convert_to_webp.py</code></pre>
 
+<h4 style="font-size:16px;">📐 Image Resize with Background Removal</h4>
+<p>Resizes images onto a fixed 800x1000 canvas without stretching, automatically removes the background (e.g. a white studio backdrop) using AI, and centers the subject on a transparent canvas. Output is saved as lossless PNG with original colors and quality preserved.</p>
+<h5 style="font-size:14px;">1. Install the dependencies</h5>
+<pre><code>pip install pillow rembg onnxruntime</code></pre>
+<h5 style="font-size:14px;">2. Run the script</h5>
+<pre><code>python resize_images.py "raw images"</code></pre>
+<p>Or specify a custom output folder:</p>
+<pre><code>python resize_images.py "raw images" "final images"</code></pre>
+
 <h4 style="font-size:16px;">📊 Numbers to CSV Conversion</h4>
 <h5 style="font-size:14px;">1. Install the dependency</h5>
 <pre><code>pip install numbers-parser</code></pre>
