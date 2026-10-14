@@ -4,14 +4,21 @@ A collection of Python scripts to automate Excel tasks, simplify complex formula
 <h4 style="font-size:16px;">🖼️ Image to WebP Conversion</h4>
 <pre><code>python convert_to_webp.py</code></pre>
 
-<h4 style="font-size:16px;">📐 Image Resize with Background Removal</h4>
-<p>Resizes images onto a fixed 800x1000 canvas without stretching, automatically removes the background (e.g. a white studio backdrop) using AI, and centers the subject on a transparent canvas. Output is saved as lossless PNG with original colors and quality preserved.</p>
-<h5 style="font-size:14px;">1. Install the dependencies</h5>
-<pre><code>pip install pillow rembg onnxruntime</code></pre>
+<h4 style="font-size:16px;">📐 Bulk Image Resize (Keeps Transparency)</h4>
+<p>Resizes every image in a folder <b>and all of its subfolders</b> onto a fixed 800x1000 canvas without stretching or distorting the original. The image is scaled proportionally, centered, and given a small margin on all sides.</p>
+<ul>
+<li>Images with a transparent background are saved as <b>PNG</b> on a transparent canvas (transparency is preserved).</li>
+<li>Images without transparency are saved as <b>JPG</b> on a white canvas.</li>
+<li>Each resized image is saved in the <b>same folder as the original</b> with <code>_resized</code> added to the name (e.g. <code>photo.jpg</code> becomes <code>photo_resized.jpg</code>).</li>
+<li>Original images are never modified or deleted, and files already ending in <code>_resized</code> are skipped, so re-running is safe.</li>
+<li>Supported formats: JPG, JPEG, PNG, WebP, BMP, TIFF, GIF.</li>
+</ul>
+<h5 style="font-size:14px;">1. Install the dependency</h5>
+<pre><code>pip install pillow</code></pre>
 <h5 style="font-size:14px;">2. Run the script</h5>
 <pre><code>python resize_images.py "raw images"</code></pre>
-<p>Or specify a custom output folder:</p>
-<pre><code>python resize_images.py "raw images" "final images"</code></pre>
+<p>Or run it on the current folder and all its subfolders:</p>
+<pre><code>python resize_images.py .</code></pre>
 
 <h4 style="font-size:16px;">📊 Numbers to CSV Conversion</h4>
 <h5 style="font-size:14px;">1. Install the dependency</h5>
